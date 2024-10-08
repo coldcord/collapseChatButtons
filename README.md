@@ -1,5 +1,6 @@
 
 able to hide the chat buttons
+![button hide preview](preview.gif)
 
 <!-->
 
