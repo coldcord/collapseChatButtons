@@ -71,7 +71,7 @@ function buttonsWrapper(buttons: React.ReactNode[], props: any) {
 }
 
 export default definePlugin({
-    name: "hideChatButtons",
+    name: "HideChatButtons",
     description: "able to hide the chat buttons",
     settings: settings,
     authors: [Devs.iamme],
