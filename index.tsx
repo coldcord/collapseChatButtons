@@ -6,6 +6,7 @@
 
 import { ChatBarButton } from "@api/ChatButtons";
 import { definePluginSettings } from "@api/Settings";
+import ErrorBoundary from "@components/ErrorBoundary";
 import { Devs } from "@utils/constants";
 import definePlugin, { OptionType, StartAt } from "@utils/types";
 import { Icons, useMemo, useState } from "@webpack/common";
@@ -48,7 +49,7 @@ function CollapseToggleButton(props: { open: boolean | undefined, onClick: Mouse
     </ChatBarButton>);
 }
 
-function buttonsWrapper(buttons: React.ReactNode[], props: any) {
+function ButtonsWrapper(buttons: React.ReactNode[], props: any) {
     if (props.disabled) return;
     const [open, setOpen] = useState(collapsechatbuttonsopen);
 
@@ -80,11 +81,11 @@ export default definePlugin({
             find: '"sticker")',
             replacement: {
                 match: /(.buttons,children:)(\i)\}/,
-                replace: "$1$self.buttonsWrapper($2, arguments[0])}"
+                replace: "$1$self.ButtonsWrapper($2, arguments[0])}"
             }
         }
     ],
     startAt: StartAt.Init,
-    buttonsWrapper: buttonsWrapper,
+    ButtonsWrapper: (...props: any) => <ErrorBoundary><ButtonsWrapper {...props} /></ErrorBoundary>,
     start: async () => { collapsechatbuttonsopen = settings.store.Open; }
 });
