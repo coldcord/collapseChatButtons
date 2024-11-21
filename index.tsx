@@ -11,7 +11,7 @@ import definePlugin, { OptionType, StartAt } from "@utils/types";
 import { Icons, useMemo, useState } from "@webpack/common";
 import { MouseEventHandler } from "react";
 
-let hidechatbuttonsopen: boolean | undefined;
+let collapsechatbuttonsopen: boolean | undefined;
 
 const settings = definePluginSettings({
     Open: {
@@ -20,19 +20,19 @@ const settings = definePluginSettings({
         default: false,
         onChange: (store: { open: boolean; }) => {
             console.log("changing open", store.open);
-            hidechatbuttonsopen = store.open;
+            collapsechatbuttonsopen = store.open;
         }
     },
 });
 
-function HideToggleButton(props: { open: boolean | undefined, onClick: MouseEventHandler<HTMLButtonElement>; }) {
+function CollapseToggleButton(props: { open: boolean | undefined, onClick: MouseEventHandler<HTMLButtonElement>; }) {
     return (<ChatBarButton
         onClick={props.onClick}
         tooltip={props.open ? "Close" : "Open"}
     >
         <svg
-            id="vc-chat-button-hide-buttons-toggle"
-            className={props.open ? "vc-hide-chat-buttons-toggle-open" : "vc-hide-chat-buttons-toggle-closed"}
+            id="vc-chat-button-collapse-buttons-toggle"
+            className={props.open ? "vc-collapse-chat-buttons-toggle-open" : "vc-collapse-chat-buttons-toggle-closed"}
             fill="currentColor"
             fillRule="evenodd"
             width="24"
@@ -50,10 +50,10 @@ function HideToggleButton(props: { open: boolean | undefined, onClick: MouseEven
 
 function buttonsWrapper(buttons: React.ReactNode[], props: any) {
     if (props.disabled) return;
-    const [open, setOpen] = useState(hidechatbuttonsopen);
+    const [open, setOpen] = useState(collapsechatbuttonsopen);
 
     useMemo(() => {
-        hidechatbuttonsopen = open;
+        collapsechatbuttonsopen = open;
     }, [open]);
 
     const buttonList = (
@@ -63,7 +63,7 @@ function buttonsWrapper(buttons: React.ReactNode[], props: any) {
             overflowX: "auto"
         }}>
             {open ? buttons : null}
-            <HideToggleButton onClick={() => setOpen(!open)} open={open}></HideToggleButton>
+            <CollapseToggleButton onClick={() => setOpen(!open)} open={open}></CollapseToggleButton>
         </div>
     );
     buttons = [buttonList];
@@ -71,8 +71,8 @@ function buttonsWrapper(buttons: React.ReactNode[], props: any) {
 }
 
 export default definePlugin({
-    name: "HideChatButtons",
-    description: "able to hide the chat buttons",
+    name: "CollapseChatButtons",
+    description: "able to collapse the chat buttons",
     settings: settings,
     authors: [Devs.iamme],
     patches: [
@@ -86,5 +86,5 @@ export default definePlugin({
     ],
     startAt: StartAt.Init,
     buttonsWrapper: buttonsWrapper,
-    start: async () => { hidechatbuttonsopen = settings.store.Open; }
+    start: async () => { collapsechatbuttonsopen = settings.store.Open; }
 });
