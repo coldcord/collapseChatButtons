@@ -49,8 +49,8 @@ function CollapseToggleButton(props: { open: boolean | undefined, onClick: Mouse
     </ChatBarButton>);
 }
 
-function ButtonsWrapper(buttons: React.ReactNode[], props: any) {
-    if (props.disabled) return;
+function ButtonsWrapper({ buttons, disabled } : { buttons: React.ReactNode[]; disabled: boolean; }) {
+    if (disabled) return;
     const [open, setOpen] = useState(collapsechatbuttonsopen);
 
     useMemo(() => {
@@ -86,6 +86,6 @@ export default definePlugin({
         }
     ],
     startAt: StartAt.Init,
-    ButtonsWrapper: (...props: any) => <ErrorBoundary><ButtonsWrapper {...props} /></ErrorBoundary>,
+    ButtonsWrapper: (buttons: React.ReactNode[], props: any) => <ErrorBoundary><ButtonsWrapper buttons={buttons} {...props} /></ErrorBoundary>,
     start: async () => { collapsechatbuttonsopen = settings.store.Open; }
 });
