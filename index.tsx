@@ -33,7 +33,7 @@ const settings = definePluginSettings({
     },
     ExcludedButtons: {
         type: OptionType.STRING,
-        description: "Semi colon separated list of buttons, you have gift, emoji, sticker, and maybe others. NOTE this doesn't support custom buttons by plugins!",
+        description: "Semi colon separated list of buttons (IDs), you have gift, emoji, sticker, appLauncher and vencord-chat-buttons and maybe others. NOTE this doesn't support custom buttons by plugins and names should be lower case!",
         default: "submit;",
         onChange: UpdateExcludedButtons
     }
@@ -83,7 +83,7 @@ function ButtonsWrapper({ buttons, disabled }: { buttons: React.ReactNode[]; dis
         <div id="chat-bar-buttons-menu" style={{
             display: "flex",
             flexWrap: "nowrap",
-            overflowX: "auto"
+            overflow: "hidden",
         }}>
             {open ? includedButtons : null}
             <CollapseToggleButton onClick={() => setOpen(!open)} open={open}></CollapseToggleButton>
@@ -96,13 +96,14 @@ export default definePlugin({
     name: "CollapseChatButtons",
     description: "able to collapse the chat buttons",
     settings: settings,
+    dependencies: ["ChatInputButtonAPI"],
     authors: [Devs.iamme],
     patches: [
         {
-            find: '"sticker")',
+            find: "\"sticker\")",
             replacement: {
-                match: /(.buttons,children:)(\i)\}/,
-                replace: "$1$self.ButtonsWrapper($2, arguments[0])}"
+                match: /(.buttons,.{20}children:)([^}]+)/,
+                replace: "$1$self.ButtonsWrapper($2, arguments[0])"
             }
         }
     ],
