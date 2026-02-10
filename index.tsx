@@ -102,7 +102,7 @@ export default definePlugin({
         {
             find: "\"sticker\")",
             replacement: {
-                match: /(.buttons,.{20}children:)([^}]+)/,
+                match: /(?<="div",\{.{0,15}children:)(.+?)\}/,
                 replace: "$1$self.ButtonsWrapper($2, arguments[0])"
             }
         }
