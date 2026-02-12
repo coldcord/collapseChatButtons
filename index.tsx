@@ -5,16 +5,21 @@
  */
 
 import { ChatBarButton } from "@api/ChatButtons";
-import { definePluginSettings } from "@api/Settings";
+import { definePluginSettings, migratePluginSettings } from "@api/Settings";
 import ErrorBoundary from "@components/ErrorBoundary";
 import { Devs } from "@utils/constants";
+import { Logger } from "@utils/Logger";
+import { useForceUpdater } from "@utils/react";
 import definePlugin, { OptionType, StartAt } from "@utils/types";
-import { useMemo, useState } from "@webpack/common";
-import { MouseEventHandler, ReactElement } from "react";
+import { useEffect, useMemo, useState } from "@webpack/common";
+import { MouseEventHandler } from "react";
 
-let collapsechatbuttonsopen: boolean | undefined;
+// TODO: add a setting to allow excluding this feature in certain chats
+
+let collapseChatButtonsOpen: boolean = false;
 
 const excluded = new Set();
+const logger = new Logger("CollapseChatButtons");
 
 function UpdateExcludedButtons(val: string) {
     excluded.clear();
@@ -27,8 +32,9 @@ const settings = definePluginSettings({
         description: "opened by default",
         default: false,
         onChange: (store: { open: boolean; }) => {
-            console.log("changing open", store.open);
-            collapsechatbuttonsopen = store.open;
+            logger.debug("changing default open", store.open);
+
+            collapseChatButtonsOpen = store.open;
         }
     },
     ExcludedButtons: {
@@ -49,10 +55,10 @@ function CollapseToggleButton(props: { open: boolean | undefined, onClick: Mouse
             className={props.open ? "vc-collapse-chat-buttons-toggle-open" : "vc-collapse-chat-buttons-toggle-closed"}
             fill="currentColor"
             fillRule="evenodd"
-            width="24"
-            height="24"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
-            style={{ scale: "1.096", translate: "0 -1px" }}
+            style={{ translate: "0 -1px" }}
         >
             {props.open ?
                 <><path d="M1.3 21.3a1 1 0 1 0 1.4 1.4l20-20a1 1 0 0 0-1.4-1.4l-20 20ZM3.16 16.05c.18.24.53.26.74.05l.72-.72c.18-.18.2-.45.05-.66a15.7 15.7 0 0 1-1.43-2.52.48.48 0 0 1 0-.4c.4-.9 1.18-2.37 2.37-3.72C7.13 6.38 9.2 5 12 5c.82 0 1.58.12 2.28.33.18.05.38 0 .52-.13l.8-.8c.25-.25.18-.67-.15-.79A9.79 9.79 0 0 0 12 3C4.89 3 1.73 10.11 1.11 11.7a.83.83 0 0 0 0 .6c.25.64.9 2.15 2.05 3.75Z"></path><path d="M8.18 10.81c-.13.43.36.65.67.34l2.3-2.3c.31-.31.09-.8-.34-.67a4 4 0 0 0-2.63 2.63ZM12.85 15.15c-.31.31-.09.8.34.67a4.01 4.01 0 0 0 2.63-2.63c.13-.43-.36-.65-.67-.34l-2.3 2.3Z"></path> <path d="M9.72 18.67a.52.52 0 0 0-.52.13l-.8.8c-.25.25-.18.67.15.79 1.03.38 2.18.61 3.45.61 7.11 0 10.27-7.11 10.89-8.7a.83.83 0 0 0 0-.6c-.25-.64-.9-2.15-2.05-3.75a.49.49 0 0 0-.74-.05l-.72.72a.51.51 0 0 0-.05.66 15.7 15.7 0 0 1 1.43 2.52c.06.13.06.27 0 .4-.4.9-1.18 2.37-2.37 3.72C16.87 17.62 14.8 19 12 19c-.82 0-1.58-.12-2.28-.33Z"></path></> :
@@ -61,23 +67,31 @@ function CollapseToggleButton(props: { open: boolean | undefined, onClick: Mouse
         </svg>
     </ChatBarButton>);
 }
-
+// there is an issue, vencord-chat-buttons is considered a button when calculating the length
 function ButtonsWrapper({ buttons, disabled }: { buttons: React.ReactNode[]; disabled: boolean; }) {
     if (disabled) return;
-    const [open, setOpen] = useState(collapsechatbuttonsopen);
+    const [open, setOpen] = useState(collapseChatButtonsOpen);
+    const forceUpdate = useForceUpdater();
 
-    useMemo(() => {
-        collapsechatbuttonsopen = open;
+    useEffect(() => {
+        collapseChatButtonsOpen = open;
+        forceUpdate();
     }, [open]);
-    const excludedButtons: React.ReactNode[] = [];
-    const includedButtons: React.ReactNode[] = [];
-    for (const button of buttons) {
-        if (excluded.has((button as ReactElement)?.key)) {
-            excludedButtons.push(button);
-            continue;
+
+    const { excludedButtons, includedButtons } = useMemo(() => {
+        const ex: React.ReactNode[] = [];
+        const inc: React.ReactNode[] = [];
+
+        for (const button of buttons) {
+            const key = (button as any)?.key;
+            if (key && excluded.has(key)) {
+                ex.push(button);
+            } else {
+                inc.push(button);
+            }
         }
-        includedButtons.push(button);
-    }
+        return { excludedButtons: ex, includedButtons: inc };
+    }, [buttons]);
 
     return (
         <div id="chat-bar-buttons-menu" style={{
@@ -92,25 +106,27 @@ function ButtonsWrapper({ buttons, disabled }: { buttons: React.ReactNode[]; dis
     );
 }
 
+migratePluginSettings("CollapseChatButtons", "HideChatButtons");
 export default definePlugin({
     name: "CollapseChatButtons",
     description: "able to collapse the chat buttons",
-    settings: settings,
     dependencies: ["ChatInputButtonAPI"],
+    settings: settings,
     authors: [Devs.iamme],
     patches: [
         {
             find: "\"sticker\")",
             replacement: {
-                match: /(?<="div",\{.{0,15}children:)(.+?)\}/,
-                replace: "$1$self.ButtonsWrapper($2, arguments[0])"
+                // NOTE: the extra ) is for ChatInputButtonAPI patch that seems to add another )
+                match: /(?<=0===\i\.length\)\)?\?null:.{0,60}children:)(\i)/,
+                replace: "$self.ButtonsWrapper($1, arguments[0])"
             }
         }
     ],
     startAt: StartAt.Init,
     ButtonsWrapper: (buttons: React.ReactNode[], props: any) => <ErrorBoundary><ButtonsWrapper buttons={buttons} {...props} /></ErrorBoundary>,
     start: async () => {
-        collapsechatbuttonsopen = settings.store.Open;
+        collapseChatButtonsOpen = settings.store.Open;
         UpdateExcludedButtons(settings.store.ExcludedButtons);
     }
 });
